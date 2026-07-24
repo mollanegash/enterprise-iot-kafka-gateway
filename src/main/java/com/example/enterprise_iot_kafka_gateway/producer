@@ -1,0 +1,56 @@
+package com.example.enterprise_iot_kafka_gateway.producer;
+
+import com.example.enterprise_iot_kafka_gateway.model.SensorTelemetry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Enterprise Kafka Producer Service.
+ * Responsible for publishing real-time IoT sensor telemetry payloads 
+ * to the designated Kafka messaging topic with asynchronous result tracking.
+ * 
+ * @author Molla Negash
+ * @since 2026-07
+ */
+@Service
+public class KafkaProducerService {
+
+    private static final Logger logger = LoggerFactory.getLogger(KafkaProducerService.class);
+    private static final String TOPIC_NAME = "iot-telemetry-stream";
+
+    private final KafkaTemplate<String, SensorTelemetry> kafkaTemplate;
+
+    public KafkaProducerService(KafkaTemplate<String, SensorTelemetry> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    /**
+     * Publishes sensor telemetry records asynchronously to Kafka using the device ID as the partitioning key.
+     * 
+     * @param telemetry The sensor telemetry payload to broadcast.
+     */
+    public void sendTelemetry(SensorTelemetry telemetry) {
+        String partitionKey = telemetry.deviceId();
+
+        CompletableFuture<SendResult<String, SensorTelemetry>> future = 
+            kafkaTemplate.send(TOPIC_NAME, partitionKey, telemetry);
+
+        future.whenComplete((result, ex) -> {
+            if (ex == null) {
+                logger.info("Successfully published telemetry to Kafka [Topic: {}, Partition: {}, Offset: {}] for Device: {}",
+                    result.getRecordMetadata().topic(),
+                    result.getRecordMetadata().partition(),
+                    result.getRecordMetadata().offset(),
+                    partitionKey);
+            } else {
+                logger.error("Failed to publish telemetry to Kafka for Device: {} due to error: {}", 
+                    partitionKey, ex.getMessage(), ex);
+            }
+        });
+    }
+}

@@ -1,0 +1,46 @@
+package com.example.enterprise_iot_kafka_gateway.consumer;
+
+import com.example.enterprise_iot_kafka_gateway.model.SensorTelemetry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.stereotype.Service;
+
+/**
+ * Enterprise Kafka Consumer Service.
+ * Listens to the iot-telemetry-stream topic, processes incoming sensor payloads,
+ * and monitors industrial equipment for critical temperature thresholds.
+ * 
+ * @author Molla Negash
+ * @since 2026-07
+ */
+@Service
+public class KafkaConsumerService {
+
+    private static final Logger logger = LoggerFactory.getLogger(KafkaConsumerService.class);
+
+    /**
+     * Consumes telemetry records from the Kafka message broker in real-time.
+     * 
+     * @param telemetry The deserialized sensor telemetry payload.
+     */
+    @KafkaListener(topics = "iot-telemetry-stream", groupId = "iot-gateway-consumer-group")
+    public void consumeTelemetry(@Payload SensorTelemetry telemetry) {
+        logger.info("Received Kafka Message -> Device: [{}] at Location: [{}] | Temp: {}°C | Status: [{}]",
+            telemetry.deviceId(),
+            telemetry.location(),
+            telemetry.temperature(),
+            telemetry.status()
+        );
+
+        // Real-time stream analytics / threshold alerting logic
+        if ("WARNING_HIGH_TEMP".equals(telemetry.status())) {
+            logger.warn("🚨 CRITICAL ALERT! Device {} in {} has exceeded safe temperature limits! Current Temp: {}°C",
+                telemetry.deviceId(),
+                telemetry.location(),
+                telemetry.temperature()
+            );
+        }
+    }
+}
